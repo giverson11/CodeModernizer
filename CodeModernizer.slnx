@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CodeModernizer.Api/CodeModernizer.Api.csproj" />
+    <Project Path="src/CodeModernizer.Core/CodeModernizer.Core.csproj" />
+    <Project Path="src/CodeModernizer.Infrastructure/CodeModernizer.Infrastructure.csproj" />
+  </Folder>
+</Solution>

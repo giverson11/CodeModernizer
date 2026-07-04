@@ -1,0 +1,9 @@
+{
+  "id": "java-21",
+  "displayName": "Java → Java 21",
+  "language": "Java",
+  "targetVersion": "21",
+  "fileExtensions": [".java"],
+  "promptFile": "prompt.md",
+  "reviewPromptFile": "review-prompt.md"
+}

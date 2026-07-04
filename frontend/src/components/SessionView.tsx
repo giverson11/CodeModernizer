@@ -1,0 +1,195 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, FileDetail, FileSummary, Session } from "../api";
+import DiffViewer from "./DiffViewer";
+
+interface Props {
+  initialSession: Session;
+  onSessionUpdate: (session: Session) => void;
+}
+
+const ACTIVE_FILE_STATUSES = new Set(["Pending", "Modernizing"]);
+
+function statusIcon(file: FileSummary): string {
+  switch (file.status) {
+    case "Pending": return "○";
+    case "Modernizing": return "◐";
+    case "Ready": return file.applied ? "✔" : "●";
+    case "Unchanged": return "—";
+    case "Failed": return "✕";
+  }
+}
+
+export default function SessionView({ initialSession, onSessionUpdate }: Props) {
+  const [session, setSession] = useState(initialSession);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<FileDetail | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [applied, setApplied] = useState<string[] | null>(null);
+  const lastFileStatuses = useRef<Map<string, string>>(new Map());
+
+  const isBusy =
+    session.status === "Running" ||
+    session.status === "Scanning" ||
+    session.status === "Reviewing" ||
+    session.files.some((f) => ACTIVE_FILE_STATUSES.has(f.status));
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const updated = await api.getSession(session.id);
+      setSession(updated);
+      onSessionUpdate(updated);
+      return updated;
+    } catch {
+      return null;
+    }
+  }, [session.id, onSessionUpdate]);
+
+  // Poll while the modernizer, an adjustment, or the review is running.
+  useEffect(() => {
+    if (!isBusy) return;
+    const timer = setInterval(refreshSession, 2000);
+    return () => clearInterval(timer);
+  }, [isBusy, refreshSession]);
+
+  // Re-fetch the open file when its status changes (e.g. adjust finished).
+  useEffect(() => {
+    for (const file of session.files) {
+      const previous = lastFileStatuses.current.get(file.id);
+      if (file.id === selectedFileId && previous && previous !== file.status) {
+        api.getFile(session.id, file.id).then(setDetail).catch(() => undefined);
+      }
+      lastFileStatuses.current.set(file.id, file.status);
+    }
+  }, [session, selectedFileId]);
+
+  const openFile = async (fileId: string) => {
+    setSelectedFileId(fileId);
+    setDetail(null);
+    try {
+      setDetail(await api.getFile(session.id, fileId));
+    } catch (e) {
+      setActionError((e as Error).message);
+    }
+  };
+
+  const runAction = async (action: () => Promise<FileDetail | void>) => {
+    setActionError(null);
+    try {
+      const result = await action();
+      if (result) setDetail(result);
+      await refreshSession();
+    } catch (e) {
+      setActionError((e as Error).message);
+    }
+  };
+
+  const startReview = () => runAction(() => api.startReview(session.id));
+
+  const applyChanges = async () => {
+    const acceptedFiles = session.files.filter((f) => f.acceptedCount > 0).length;
+    if (!window.confirm(`Write accepted changes for ${acceptedFiles} file(s) to disk?`)) return;
+    setActionError(null);
+    try {
+      const result = await api.apply(session.id);
+      setApplied(result.written);
+      await refreshSession();
+    } catch (e) {
+      setActionError((e as Error).message);
+    }
+  };
+
+  const done = session.files.filter((f) => !ACTIVE_FILE_STATUSES.has(f.status)).length;
+  const anyAccepted = session.files.some((f) => f.acceptedCount > 0);
+
+  return (
+    <div className="session">
+      <aside className="sidebar">
+        <div className="progress-box">
+          <div className="progress-label">
+            {session.status === "Running" || session.status === "Scanning"
+              ? `Modernizing ${done}/${session.files.length} files…`
+              : `${session.files.length} files scanned`}
+          </div>
+          <div className="progress-bar">
+            <div
+              className="progress-fill"
+              style={{ width: `${session.files.length ? (done / session.files.length) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="progress-meta">
+            {session.projectPath}
+            <br />
+            agent: {session.agentModelId} · review: {session.reviewModelId}
+          </div>
+        </div>
+
+        <ul className="file-list">
+          {session.files.map((file) => (
+            <li key={file.id}>
+              <button
+                className={`file-item ${file.id === selectedFileId ? "selected" : ""} status-${file.status.toLowerCase()}`}
+                onClick={() => openFile(file.id)}
+                disabled={file.status === "Pending" || file.status === "Modernizing"}
+              >
+                <span className="file-icon">{statusIcon(file)}</span>
+                <span className="file-path">{file.relativePath}</span>
+                {file.hunkCount > 0 && (
+                  <span className="file-counts">
+                    {file.acceptedCount + file.rejectedCount}/{file.hunkCount}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+          {session.files.length === 0 && <li className="empty">No matching files found.</li>}
+        </ul>
+
+        <div className="sidebar-actions">
+          <button
+            className="btn"
+            onClick={startReview}
+            disabled={session.status !== "Completed"}
+            title="Ask the overview model whether the program still behaves the same"
+          >
+            {session.status === "Reviewing" ? "Reviewing…" : "Run overview check"}
+          </button>
+          <button className="btn primary" onClick={applyChanges} disabled={!anyAccepted || isBusy}>
+            Apply accepted changes
+          </button>
+        </div>
+
+        {session.review && (
+          <div className={`review-box verdict-${session.review.verdict.toLowerCase()}`}>
+            <div className="review-verdict">{session.review.verdict.replace(/_/g, " ")}</div>
+            <div className="review-summary">{session.review.summary}</div>
+          </div>
+        )}
+
+        {applied && (
+          <div className="banner success">
+            Wrote {applied.length} file(s) to disk.
+          </div>
+        )}
+        {session.error && <div className="banner error">{session.error}</div>}
+        {actionError && <div className="banner error">{actionError}</div>}
+      </aside>
+
+      <main className="diff-pane">
+        {!detail && (
+          <div className="placeholder">
+            {selectedFileId ? "Loading file…" : "Select a file to review its changes."}
+          </div>
+        )}
+        {detail && (
+          <DiffViewer
+            key={detail.id}
+            sessionId={session.id}
+            detail={detail}
+            onDetailChange={setDetail}
+            onSummaryChange={refreshSession}
+          />
+        )}
+      </main>
+    </div>
+  );
+}

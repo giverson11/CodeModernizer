@@ -1,0 +1,8 @@
+bin/
+obj/
+node_modules/
+src/CodeModernizer.Api/wwwroot/
+*.user
+.vs/
+.idea/
+dist/

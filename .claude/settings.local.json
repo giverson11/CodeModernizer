@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet --version)",
+      "Bash(npm --version)",
+      "Bash(dotnet new *)",
+      "Bash(dotnet sln *)",
+      "Bash(dotnet add *)",
+      "Bash(rm src/CodeModernizer.Core/Class1.cs src/CodeModernizer.Infrastructure/Class1.cs)",
+      "Bash(dotnet build *)",
+      "Bash(curl -s http://localhost:5210/api/config)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST http://localhost:5210/api/sessions -H 'Content-Type: application/json' -d '{\"projectPath\":\"/tmp/claude-1000/-home-garrett-Documents-CodeModernizer/226f8170-f853-42dd-bed7-b40b3a366ca9/scratchpad/sample-java\",\"skillId\":\"java-21\",\"providerId\":\"claude\",\"agentModelId\":\"claude-opus-4-8\",\"reviewModelId\":\"claude-opus-4-8\"}')",
+      "Bash(curl -s http://localhost:5210/api/sessions/71e08d37ffc6)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['status']\\); print\\(d['files'][0]['status'], '|', d['files'][0]['error']\\)\")"
+    ]
+  }
+}
