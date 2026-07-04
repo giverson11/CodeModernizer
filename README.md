@@ -30,7 +30,23 @@ Currently shipped: `java-21` (Java → Java 21) on Anthropic Claude models.
 
 - .NET 10 SDK **and** the ASP.NET Core runtime (`sudo pacman -S aspnet-runtime` on Arch/CachyOS)
 - Node.js 20+ (only needed to build/develop the frontend)
-- `ANTHROPIC_API_KEY` exported in the environment that runs the API
+- An Anthropic API key (see below)
+
+## API key
+
+Put your key in `src/CodeModernizer.Api/appsettings.Local.json` (gitignored):
+
+```json
+{
+  "Anthropic": {
+    "ApiKey": "sk-ant-..."
+  }
+}
+```
+
+The `ANTHROPIC_API_KEY` environment variable is used as a fallback when the
+config value is empty. The UI shows a warning on the setup screen if neither
+is set.
 
 ## Running
 
@@ -39,7 +55,7 @@ Currently shipped: `java-21` (Java → Java 21) on Anthropic Claude models.
 cd frontend && npm install && npm run build && cd ..
 
 # 2. Run the backend (serves API + UI on http://localhost:5210)
-ANTHROPIC_API_KEY=sk-ant-... dotnet run --project src/CodeModernizer.Api
+dotnet run --project src/CodeModernizer.Api
 ```
 
 Frontend development with hot reload (proxies `/api` to port 5210):

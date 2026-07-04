@@ -6,3 +6,4 @@ src/CodeModernizer.Api/wwwroot/
 .vs/
 .idea/
 dist/
+appsettings.Local.json

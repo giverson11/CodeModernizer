@@ -10,6 +10,14 @@ using CodeModernizer.Infrastructure.Skills;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Optional local config for secrets (gitignored); overrides appsettings.json.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
+// Key resolution: appsettings(.Local).json → ANTHROPIC_API_KEY env var (SDK default).
+var anthropicApiKey = builder.Configuration["Anthropic:ApiKey"]?.Trim();
+var hasApiKey = !string.IsNullOrEmpty(anthropicApiKey)
+    || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY"));
+
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
@@ -18,7 +26,7 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 
 builder.Services.AddSingleton<ISkillRegistry>(_ =>
     new FileSkillRegistry(ResolveSkillsDirectory(builder)));
-builder.Services.AddSingleton<IAiProvider, ClaudeProvider>();
+builder.Services.AddSingleton<IAiProvider>(_ => new ClaudeProvider(anthropicApiKey));
 builder.Services.AddSingleton<IAiProviderRegistry, AiProviderRegistry>();
 builder.Services.AddSingleton<IDiffService, DiffService>();
 builder.Services.AddSingleton<ISessionStore, InMemorySessionStore>();
@@ -35,7 +43,34 @@ var api = app.MapGroup("/api");
 api.MapGet("/config", (ISkillRegistry skills, IAiProviderRegistry providers) =>
     new ConfigDto(
         skills.Skills.Select(s => new SkillDto(s.Id, s.DisplayName, s.Language, s.TargetVersion, s.FileExtensions)).ToList(),
-        providers.Providers.Select(p => new AiProviderInfo(p.Id, p.DisplayName, p.Models)).ToList()));
+        providers.Providers.Select(p => new AiProviderInfo(p.Id, p.DisplayName, p.Models)).ToList(),
+        hasApiKey));
+
+// Server-side directory listing backing the frontend's folder picker (a browser
+// cannot read absolute paths from the native file dialog).
+api.MapGet("/browse", (string? path) =>
+{
+    var target = string.IsNullOrWhiteSpace(path)
+        ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        : path;
+    try
+    {
+        var full = Path.GetFullPath(target);
+        if (!Directory.Exists(full))
+            return Results.BadRequest(new { error = $"Directory not found: {full}" });
+
+        var directories = new DirectoryInfo(full).EnumerateDirectories()
+            .Where(d => !d.Name.StartsWith('.'))
+            .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(d => new DirectoryEntryDto(d.Name, d.FullName))
+            .ToList();
+        return Results.Ok(new BrowseDto(full, Path.GetDirectoryName(full), directories));
+    }
+    catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or ArgumentException)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
 
 api.MapPost("/sessions", (StartSessionRequest request, ModernizationService service) =>
 {

@@ -15,7 +15,14 @@ public sealed record AdjustRequest(string Instructions);
 
 public sealed record SkillDto(string Id, string DisplayName, string Language, string TargetVersion, IReadOnlyList<string> FileExtensions);
 
-public sealed record ConfigDto(IReadOnlyList<SkillDto> Skills, IReadOnlyList<AiProviderInfo> Providers);
+public sealed record ConfigDto(
+    IReadOnlyList<SkillDto> Skills,
+    IReadOnlyList<AiProviderInfo> Providers,
+    bool HasApiKey);
+
+public sealed record DirectoryEntryDto(string Name, string Path);
+
+public sealed record BrowseDto(string Path, string? Parent, IReadOnlyList<DirectoryEntryDto> Directories);
 
 public sealed record FileSummaryDto(
     string Id, string RelativePath, FileChangeStatus Status,

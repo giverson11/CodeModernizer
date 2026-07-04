@@ -10,28 +10,20 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
 endif
 let s:shortmess_save = &shortmess
 set shortmess+=aoO
-badd +0 README.md
+badd +310 ~/Documents/CodeModernizer/src/CodeModernizer.Infrastructure/Services/ModernizationService.cs
+badd +2 ~/Documents/CodeModernizer/output:extension-output-asvetliakov.vscode-neovim-\%231-vscode-neovim\%20messages
+badd +1 ~/Documents/CodeModernizer/src/CodeModernizer.Api/appsettings.json
+badd +3 ~/Documents/CodeModernizer/src/CodeModernizer.Api/appsettings.Local.json
+badd +1 ~/Documents/Text\ File.txt
 argglobal
 %argdel
-$argadd README.md
-edit README.md
-argglobal
-setlocal foldmethod=manual
-setlocal foldexpr=0
-setlocal foldmarker={{{,}}}
-setlocal foldignore=#
-setlocal foldlevel=0
-setlocal foldminlines=1
-setlocal foldnestmax=20
-setlocal foldenable
-silent! normal! zE
-let &fdl = &fdl
-let s:l = 1 - ((0 * winheight(0) + 14) / 28)
-if s:l < 1 | let s:l = 1 | endif
-keepjumps exe s:l
-normal! zt
-keepjumps 1
-normal! 0
+wincmd t
+let s:save_winminheight = &winminheight
+let s:save_winminwidth = &winminwidth
+set winminheight=0
+set winheight=1
+set winminwidth=0
+set winwidth=1
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0 && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
   silent exe 'bwipe ' . s:wipebuf
@@ -39,12 +31,15 @@ endif
 unlet! s:wipebuf
 set winheight=1 winwidth=20
 let &shortmess = s:shortmess_save
+let &winminheight = s:save_winminheight
+let &winminwidth = s:save_winminwidth
 let s:sx = expand("<sfile>:p:r")."x.vim"
 if filereadable(s:sx)
   exe "source " . fnameescape(s:sx)
 endif
 let &g:so = s:so_save | let &g:siso = s:siso_save
 set hlsearch
+nohlsearch
 let g:this_session = v:this_session
 let g:this_obsession = v:this_session
 doautoall SessionLoadPost

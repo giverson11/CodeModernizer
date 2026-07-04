@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import { api, Config, Session } from "../api";
+import DirectoryPicker from "./DirectoryPicker";
 
 interface Props {
   config: Config;
@@ -18,6 +19,7 @@ export default function SetupForm({ config, onStarted }: Props) {
   const [reviewModelId, setReviewModelId] = useState(provider?.models[0]?.id ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
 
   const selectProvider = (id: string) => {
     setProviderId(id);
@@ -50,15 +52,30 @@ export default function SetupForm({ config, onStarted }: Props) {
     <form className="setup-card" onSubmit={submit}>
       <h2>Start a modernization run</h2>
 
+      {!config.hasApiKey && (
+        <div className="banner error">
+          No Anthropic API key configured. Set <code>Anthropic:ApiKey</code> in{" "}
+          <code>src/CodeModernizer.Api/appsettings.Local.json</code> (or export{" "}
+          <code>ANTHROPIC_API_KEY</code>) and restart the API.
+        </div>
+      )}
+
       <label>
         Project folder
-        <input
-          type="text"
-          value={projectPath}
-          onChange={(e) => setProjectPath(e.target.value)}
-          placeholder="/path/to/your/java/project"
-          required
-        />
+        <div className="path-row">
+          <input
+            type="text"
+            className="path-input"
+            value={projectPath}
+            readOnly
+            onClick={() => setShowPicker(true)}
+            placeholder="Click to select a project folder…"
+            required
+          />
+          <button type="button" className="btn" onClick={() => setShowPicker(true)}>
+            Browse…
+          </button>
+        </div>
       </label>
 
       <label>
@@ -112,6 +129,17 @@ export default function SetupForm({ config, onStarted }: Props) {
       <button className="btn primary" type="submit" disabled={submitting || !projectPath.trim()}>
         {submitting ? "Starting…" : "Run modernizer"}
       </button>
+
+      {showPicker && (
+        <DirectoryPicker
+          initialPath={projectPath.trim() || undefined}
+          onSelect={(path) => {
+            setProjectPath(path);
+            setShowPicker(false);
+          }}
+          onCancel={() => setShowPicker(false)}
+        />
+      )}
     </form>
   );
 }

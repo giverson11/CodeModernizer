@@ -7,8 +7,9 @@ using CodeModernizer.Core.Models;
 namespace CodeModernizer.Infrastructure.Providers;
 
 /// <summary>
-/// Claude provider backed by the official Anthropic SDK. Reads the API key from
-/// the ANTHROPIC_API_KEY environment variable (or an `ant auth login` profile).
+/// Claude provider backed by the official Anthropic SDK. Uses the API key passed
+/// in (from configuration) or falls back to the ANTHROPIC_API_KEY environment
+/// variable via the SDK's default resolution.
 /// </summary>
 public sealed class ClaudeProvider : IAiProvider
 {
@@ -20,7 +21,14 @@ public sealed class ClaudeProvider : IAiProvider
         "claude-sonnet-5", "claude-sonnet-4-6",
     ];
 
-    private readonly AnthropicClient _client = new();
+    private readonly AnthropicClient _client;
+
+    public ClaudeProvider(string? apiKey = null)
+    {
+        _client = string.IsNullOrWhiteSpace(apiKey)
+            ? new AnthropicClient()
+            : new AnthropicClient { ApiKey = apiKey };
+    }
 
     public string Id => "claude";
     public string DisplayName => "Anthropic Claude";
@@ -38,19 +46,28 @@ public sealed class ClaudeProvider : IAiProvider
 
     public async Task<string> CompleteAsync(string modelId, string systemPrompt, string userPrompt, CancellationToken ct = default)
     {
-        // Fable 5 (thinking always on) and Haiku must omit the thinking parameter.
-        ThinkingConfigParam? thinking = AdaptiveThinkingModels.Contains(modelId)
-            ? new ThinkingConfigAdaptive()
-            : null;
+        var system = new List<TextBlockParam> { new() { Text = systemPrompt } };
+        List<MessageParam> messages = [new() { Role = Role.User, Content = userPrompt }];
 
-        var parameters = new MessageCreateParams
-        {
-            Model = modelId,
-            MaxTokens = 64000,
-            System = new List<TextBlockParam> { new() { Text = systemPrompt } },
-            Messages = [new() { Role = Role.User, Content = userPrompt }],
-            Thinking = thinking,
-        };
+        // Fable 5 (thinking always on) and Haiku must omit the thinking parameter
+        // entirely: assigning null serializes as `"thinking": null`, which the
+        // API rejects with "thinking: Input should be an object".
+        var parameters = AdaptiveThinkingModels.Contains(modelId)
+            ? new MessageCreateParams
+            {
+                Model = modelId,
+                MaxTokens = 64000,
+                System = system,
+                Messages = messages,
+                Thinking = new ThinkingConfigAdaptive(),
+            }
+            : new MessageCreateParams
+            {
+                Model = modelId,
+                MaxTokens = 64000,
+                System = system,
+                Messages = messages,
+            };
 
         // Stream to avoid HTTP timeouts on long generations, accumulate text blocks.
         var sb = new StringBuilder();

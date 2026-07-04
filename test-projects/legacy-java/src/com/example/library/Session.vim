@@ -4,17 +4,17 @@ let v:this_session=expand("<sfile>:p")
 doautoall SessionLoadPre
 silent only
 silent tabonly
-cd ~/Documents/CodeModernizer/src/CodeModernizer.Api
+cd ~/Documents/CodeModernizer/test-projects/legacy-java/src/com/example/library
 if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 let s:shortmess_save = &shortmess
 set shortmess+=aoO
-badd +0 Contracts.cs
+badd +0 Library.java
 argglobal
 %argdel
-$argadd Contracts.cs
-edit Contracts.cs
+$argadd Library.java
+edit Library.java
 argglobal
 setlocal foldmethod=manual
 setlocal foldexpr=0
@@ -26,11 +26,11 @@ setlocal foldnestmax=20
 setlocal foldenable
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 1 - ((0 * winheight(0) + 14) / 28)
+let s:l = 18 - ((17 * winheight(0) + 14) / 28)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 1
+keepjumps 18
 normal! 0
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0 && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'

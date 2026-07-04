@@ -12,7 +12,24 @@
       "Bash(python3 -m json.tool)",
       "Bash(curl -s -X POST http://localhost:5210/api/sessions -H 'Content-Type: application/json' -d '{\"projectPath\":\"/tmp/claude-1000/-home-garrett-Documents-CodeModernizer/226f8170-f853-42dd-bed7-b40b3a366ca9/scratchpad/sample-java\",\"skillId\":\"java-21\",\"providerId\":\"claude\",\"agentModelId\":\"claude-opus-4-8\",\"reviewModelId\":\"claude-opus-4-8\"}')",
       "Bash(curl -s http://localhost:5210/api/sessions/71e08d37ffc6)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['status']\\); print\\(d['files'][0]['status'], '|', d['files'][0]['error']\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['status']\\); print\\(d['files'][0]['status'], '|', d['files'][0]['error']\\)\")",
+      "Bash(javac --version)",
+      "Bash(dotnet --list-runtimes)",
+      "Bash(ASPNETCORE_URLS=http://localhost:5210 dotnet bin/Debug/net10.0/CodeModernizer.Api.dll)",
+      "Bash(curl -s \"http://localhost:5210/api/browse?path=/home/garrett/Documents/CodeModernizer/test-projects\")",
+      "Bash(curl -s http://localhost:5210/api/browse)",
+      "Bash(curl -s \"http://localhost:5210/api/browse?path=/nope/nothere\")",
+      "Bash(ASPNETCORE_URLS=http://localhost:5311 dotnet bin/Debug/net10.0/CodeModernizer.Api.dll)",
+      "Bash(curl -s http://localhost:5311/api/config)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('hasApiKey:', d['hasApiKey']\\)\")",
+      "Bash(curl -s \"http://localhost:5311/api/browse?path=/home/garrett/Documents/CodeModernizer/test-projects\")",
+      "Bash(curl -s http://localhost:5311/api/browse)",
+      "Bash(curl -s \"http://localhost:5311/api/browse?path=/nope/nothere\")",
+      "Bash(kill %1)",
+      "Bash(python3 -c \"import json,sys; print\\('hasApiKey:', json.load\\(sys.stdin\\)['hasApiKey']\\)\")",
+      "Bash(curl -s -X POST http://localhost:5311/api/sessions -H 'Content-Type: application/json' -d '{\"projectPath\":\"/home/garrett/Documents/CodeModernizer/test-projects/legacy-java\",\"skillId\":\"java-21\",\"providerId\":\"claude\",\"agentModelId\":\"claude-haiku-4-5\",\"reviewModelId\":\"claude-haiku-4-5\"}')",
+      "Bash(sed -i 's|<Nullable>enable</Nullable>|<Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>|' thinktest.csproj)",
+      "Bash(dotnet run *)"
     ]
   }
 }

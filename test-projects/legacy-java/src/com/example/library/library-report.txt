@@ -1,0 +1,10 @@
+=========================================
+  Library Report
+  City Library
+=========================================
+Effective Java                           Joshua Bloch              2018
+Head First Java                          Kathy Sierra              2005
+Clean Code                               Robert Martin             2008
+Design Patterns                          Erich Gamma               1994
+The Pragmatic Programmer                 David Thomas              2019
+Total: 5 book(s)

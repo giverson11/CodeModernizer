@@ -24,6 +24,18 @@ export interface SkillInfo {
 export interface Config {
   skills: SkillInfo[];
   providers: AiProviderInfo[];
+  hasApiKey: boolean;
+}
+
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+}
+
+export interface BrowseResult {
+  path: string;
+  parent: string | null;
+  directories: DirectoryEntry[];
 }
 
 export interface FileSummary {
@@ -93,6 +105,9 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getConfig: () => request<Config>("/api/config"),
+
+  browse: (path?: string) =>
+    request<BrowseResult>(`/api/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`),
 
   startSession: (body: {
     projectPath: string;
