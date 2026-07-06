@@ -24,6 +24,9 @@ public sealed record DirectoryEntryDto(string Name, string Path);
 
 public sealed record BrowseDto(string Path, string? Parent, IReadOnlyList<DirectoryEntryDto> Directories);
 
+/// <summary>Incremental read of a live AI output stream (poll with from=Next).</summary>
+public sealed record LogChunkDto(int Next, string Chunk, bool Active);
+
 public sealed record FileSummaryDto(
     string Id, string RelativePath, FileChangeStatus Status,
     int HunkCount, int AcceptedCount, int RejectedCount,

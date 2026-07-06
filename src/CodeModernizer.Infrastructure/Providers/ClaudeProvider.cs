@@ -44,7 +44,9 @@ public sealed class ClaudeProvider : IAiProvider
         new("claude-haiku-4-5", "Claude Haiku 4.5"),
     ];
 
-    public async Task<string> CompleteAsync(string modelId, string systemPrompt, string userPrompt, CancellationToken ct = default)
+    public async Task<string> CompleteAsync(
+        string modelId, string systemPrompt, string userPrompt,
+        Action<string>? onOutput = null, CancellationToken ct = default)
     {
         var system = new List<TextBlockParam> { new() { Text = systemPrompt } };
         List<MessageParam> messages = [new() { Role = Role.User, Content = userPrompt }];
@@ -70,13 +72,35 @@ public sealed class ClaudeProvider : IAiProvider
             };
 
         // Stream to avoid HTTP timeouts on long generations, accumulate text blocks.
+        // Thinking deltas are surfaced to onOutput only — they are not part of the
+        // result — and the log marks where thinking ends and the file output begins
+        // (models without thinking jump straight to "writing output").
         var sb = new StringBuilder();
+        string? phase = null;
+        void Emit(string kind, string content)
+        {
+            if (onOutput is null) return;
+            if (phase != kind)
+            {
+                onOutput($"{(phase is null ? "" : "\n\n")}── {kind} ──\n");
+                phase = kind;
+            }
+            onOutput(content);
+        }
+
         await foreach (var streamEvent in _client.Messages.CreateStreaming(parameters).WithCancellation(ct))
         {
-            if (streamEvent.TryPickContentBlockDelta(out var delta) &&
-                delta.Delta.TryPickText(out var text))
+            if (!streamEvent.TryPickContentBlockDelta(out var delta)) continue;
+
+            // Text deltas build the result but are not echoed to the console —
+            // the log shows the model's thinking only.
+            if (delta.Delta.TryPickText(out var text))
             {
                 sb.Append(text.Text);
+            }
+            if (delta.Delta.TryPickThinking(out var thinkingDelta))
+            {
+                Emit("thinking", thinkingDelta.Thinking);
             }
         }
 

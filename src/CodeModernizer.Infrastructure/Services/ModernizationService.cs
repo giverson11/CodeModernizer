@@ -117,6 +117,7 @@ public sealed class ModernizationService(
 
     private async Task ModernizeFileAsync(IAiProvider provider, string modelId, ModernizationSkill skill, FileChange file)
     {
+        file.AgentLog.Reset($"── modernizing {file.RelativePath} with {modelId} ──\n");
         file.Status = FileChangeStatus.Modernizing;
         try
         {
@@ -129,7 +130,7 @@ public sealed class ModernizationService(
                 ```
                 """;
 
-            var response = await provider.CompleteAsync(modelId, skill.ModernizePrompt, userPrompt);
+            var response = await provider.CompleteAsync(modelId, skill.ModernizePrompt, userPrompt, file.AgentLog.Append);
             var code = CodeResponseParser.ExtractCode(response);
 
             if (NormalizeForComparison(code) == NormalizeForComparison(file.OriginalContent))
@@ -166,6 +167,7 @@ public sealed class ModernizationService(
             current = file.ModernizedContent ?? file.OriginalContent;
         }
 
+        file.AgentLog.Reset($"── adjusting {file.RelativePath} with {session.AgentModelId} ──\n");
         file.Status = FileChangeStatus.Modernizing;
         try
         {
@@ -189,7 +191,8 @@ public sealed class ModernizationService(
                 Return the full adjusted file.
                 """;
 
-            var response = await provider.CompleteAsync(session.AgentModelId, skill.ModernizePrompt, userPrompt);
+            var response = await provider.CompleteAsync(
+                session.AgentModelId, skill.ModernizePrompt, userPrompt, file.AgentLog.Append);
             var code = CodeResponseParser.ExtractCode(response);
 
             lock (file.SyncRoot)
@@ -217,11 +220,14 @@ public sealed class ModernizationService(
         var skill = skills.Get(session.SkillId);
         var provider = providers.Get(session.ProviderId);
 
+        session.ReviewLog.Reset($"── overview review with {session.ReviewModelId} ──\n");
+        session.Review = null; // the previous verdict is stale once a new review starts
         session.Status = SessionStatus.Reviewing;
         try
         {
             var digest = BuildReviewDigest(session);
-            var response = await provider.CompleteAsync(session.ReviewModelId, skill.ReviewPrompt, digest);
+            var response = await provider.CompleteAsync(
+                session.ReviewModelId, skill.ReviewPrompt, digest, session.ReviewLog.Append);
 
             var lines = response.Trim().Split('\n', 2);
             var verdict = lines[0].Trim().ToUpperInvariant() switch
@@ -240,6 +246,70 @@ public sealed class ModernizationService(
         {
             session.Status = SessionStatus.Completed;
         }
+    }
+
+    /// <summary>
+    /// Feeds the review's concerns back to the agent model: re-adjusts the files
+    /// the review mentions (or every ready file if none are named). Runs in the
+    /// background; the client polls the session until it leaves Running.
+    /// </summary>
+    public int ImplementReview(ModernizationSession session)
+    {
+        var review = session.Review
+            ?? throw new InvalidOperationException("No review to implement.");
+
+        var ready = session.Files.Where(f => f.Status == FileChangeStatus.Ready).ToList();
+        var targets = ready
+            .Where(f => review.Summary.Contains(Path.GetFileName(f.RelativePath), StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (targets.Count == 0) targets = ready;
+        if (targets.Count == 0) throw new InvalidOperationException("No modernized files to adjust.");
+
+        var instructions =
+            $"""
+            A behavioral-equivalence review of the whole modernized project raised these concerns:
+
+            {review.Summary}
+
+            Apply the fixes the reviewer requests where they involve this file. If none of the
+            concerns involve this file, return the current modernized version unchanged.
+            """;
+
+        session.Review = null; // it describes the pre-fix state
+        session.Status = SessionStatus.Running;
+        foreach (var file in targets) file.Status = FileChangeStatus.Modernizing;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var throttle = new SemaphoreSlim(MaxParallelFiles);
+                var tasks = targets.Select(async file =>
+                {
+                    await throttle.WaitAsync();
+                    try
+                    {
+                        await AdjustFileAsync(session, file, instructions);
+                    }
+                    finally
+                    {
+                        throttle.Release();
+                    }
+                });
+                await Task.WhenAll(tasks);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Implementing review feedback failed for session {SessionId}", session.Id);
+                session.Error = ex.Message;
+            }
+            finally
+            {
+                session.Status = SessionStatus.Completed;
+            }
+        });
+
+        return targets.Count;
     }
 
     private string BuildReviewDigest(ModernizationSession session)

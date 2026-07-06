@@ -11,7 +11,11 @@ public interface IAiProvider
     string DisplayName { get; }
     IReadOnlyList<AiModelInfo> Models { get; }
 
-    Task<string> CompleteAsync(string modelId, string systemPrompt, string userPrompt, CancellationToken ct = default);
+    /// <param name="onOutput">Invoked with each streamed output fragment (text and,
+    /// where supported, thinking) as it arrives; used for live progress display.</param>
+    Task<string> CompleteAsync(
+        string modelId, string systemPrompt, string userPrompt,
+        Action<string>? onOutput = null, CancellationToken ct = default);
 }
 
 public interface IAiProviderRegistry

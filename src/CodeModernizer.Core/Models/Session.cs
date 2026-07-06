@@ -27,6 +27,8 @@ public sealed class FileChange
     public string? Error { get; set; }
     public List<DiffHunk> Hunks { get; set; } = [];
     public bool Applied { get; set; }
+    /// <summary>Live output of the agent model while (re)modernizing this file.</summary>
+    public StreamLog AgentLog { get; } = new();
     /// <summary>Guards Hunks/ModernizedContent mutation across concurrent requests.</summary>
     public object SyncRoot { get; } = new();
 }
@@ -44,6 +46,8 @@ public sealed class ModernizationSession
     public SessionStatus Status { get; set; } = SessionStatus.Scanning;
     public List<FileChange> Files { get; set; } = [];
     public ReviewResult? Review { get; set; }
+    /// <summary>Live output of the overview model during the equivalence review.</summary>
+    public StreamLog ReviewLog { get; } = new();
     public string? Error { get; set; }
     public DateTimeOffset CreatedAt { get; } = DateTimeOffset.UtcNow;
 }

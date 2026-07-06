@@ -14,13 +14,13 @@ public class Main {
         library.addBook(new Book("978-0201633610", "Design Patterns", "Erich Gamma", 1994));
         library.addBook(new Book("978-0135957059", "The Pragmatic Programmer", "David Thomas", 2019));
 
-        Member alice = new Member.Student("Alice", "State University");
-        Member bob = new Member.Staff("Bob");
+        var alice = new Member.Student("Alice", "State University");
+        var bob = new Member.Staff("Bob");
 
         library.checkout("978-0134685991", alice);
         library.checkout("978-0132350884", bob);
 
-        List<String> summaries = library.getCatalog().stream()
+        var summaries = library.getCatalog().stream()
                 .map(book -> book.getTitle()
                         + " [" + library.categorize(book) + "] - "
                         + library.describeBorrower(book.getIsbn()))
@@ -32,8 +32,8 @@ public class Main {
         System.out.println("Active loans: " + library.countLoans());
 
         Runnable reportJob = () -> {
-            ReportWriter writer = new ReportWriter();
-            String report = writer.buildReport("City Library", library.getCatalog());
+            var writer = new ReportWriter();
+            var report = writer.buildReport("City Library", library.getCatalog());
             System.out.print(report);
             try {
                 writer.writeToFile(report, "library-report.txt");

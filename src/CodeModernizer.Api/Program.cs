@@ -93,6 +93,20 @@ api.MapGet("/sessions/{sessionId}", (string sessionId, ISessionStore store) =>
 api.MapGet("/sessions/{sessionId}/files/{fileId}", (string sessionId, string fileId, ISessionStore store) =>
     FindFile(store, sessionId, fileId) is { } file ? Results.Ok(file.ToDetailDto()) : Results.NotFound());
 
+api.MapGet("/sessions/{sessionId}/files/{fileId}/log", (string sessionId, string fileId, int? from, ISessionStore store) =>
+{
+    if (FindFile(store, sessionId, fileId) is not { } file) return Results.NotFound();
+    var (next, chunk) = file.AgentLog.Read(from ?? 0);
+    return Results.Ok(new LogChunkDto(next, chunk, file.Status == FileChangeStatus.Modernizing));
+});
+
+api.MapGet("/sessions/{sessionId}/review-log", (string sessionId, int? from, ISessionStore store) =>
+{
+    if (store.Get(sessionId) is not { } session) return Results.NotFound();
+    var (next, chunk) = session.ReviewLog.Read(from ?? 0);
+    return Results.Ok(new LogChunkDto(next, chunk, session.Status == SessionStatus.Reviewing));
+});
+
 api.MapPost("/sessions/{sessionId}/files/{fileId}/hunks/{hunkId:int}",
     (string sessionId, string fileId, int hunkId, HunkDecisionRequest request, ISessionStore store) =>
 {
@@ -133,6 +147,23 @@ api.MapPost("/sessions/{sessionId}/review", (string sessionId, ISessionStore sto
     // Runs in the background; the client polls the session for Review + status.
     _ = service.ReviewAsync(session);
     return Results.Accepted();
+});
+
+api.MapPost("/sessions/{sessionId}/review/implement", (string sessionId, ISessionStore store, ModernizationService service) =>
+{
+    if (store.Get(sessionId) is not { } session) return Results.NotFound();
+    if (session.Status is SessionStatus.Scanning or SessionStatus.Running or SessionStatus.Reviewing)
+        return Results.BadRequest(new { error = "Session is busy." });
+
+    try
+    {
+        var count = service.ImplementReview(session);
+        return Results.Ok(new { files = count });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
 });
 
 api.MapPost("/sessions/{sessionId}/apply", (string sessionId, ISessionStore store, ModernizationService service) =>

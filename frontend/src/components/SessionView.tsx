@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, FileDetail, FileSummary, Session } from "../api";
 import DiffViewer from "./DiffViewer";
+import LogTerminal from "./LogTerminal";
 
 interface Props {
   initialSession: Session;
@@ -25,7 +26,9 @@ export default function SessionView({ initialSession, onSessionUpdate }: Props) 
   const [detail, setDetail] = useState<FileDetail | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [applied, setApplied] = useState<string[] | null>(null);
+  const [showReviewTerminal, setShowReviewTerminal] = useState(false);
   const lastFileStatuses = useRef<Map<string, string>>(new Map());
+  const prevStatus = useRef(initialSession.status);
 
   const isBusy =
     session.status === "Running" ||
@@ -83,7 +86,33 @@ export default function SessionView({ initialSession, onSessionUpdate }: Props) 
     }
   };
 
-  const startReview = () => runAction(() => api.startReview(session.id));
+  const startReview = () => {
+    setShowReviewTerminal(true);
+    return runAction(() => api.startReview(session.id));
+  };
+
+  // Pop the review panel open when a review starts (but let the user close it
+  // mid-review without it snapping back open on the next poll).
+  useEffect(() => {
+    if (session.status === "Reviewing" && prevStatus.current !== "Reviewing") {
+      setShowReviewTerminal(true);
+    }
+    prevStatus.current = session.status;
+  }, [session.status]);
+
+  const implementReview = () => {
+    setShowReviewTerminal(false);
+    return runAction(async () => {
+      await api.implementReview(session.id);
+    });
+  };
+
+  const selectedSummary = session.files.find((f) => f.id === selectedFileId);
+
+  const fetchReviewLog = useCallback(
+    (from: number) => api.getReviewLog(session.id, from),
+    [session.id],
+  );
 
   const applyChanges = async () => {
     const acceptedFiles = session.files.filter((f) => f.acceptedCount > 0).length;
@@ -129,7 +158,7 @@ export default function SessionView({ initialSession, onSessionUpdate }: Props) 
               <button
                 className={`file-item ${file.id === selectedFileId ? "selected" : ""} status-${file.status.toLowerCase()}`}
                 onClick={() => openFile(file.id)}
-                disabled={file.status === "Pending" || file.status === "Modernizing"}
+                disabled={file.status === "Pending"}
               >
                 <span className="file-icon">{statusIcon(file)}</span>
                 <span className="file-path">{file.relativePath}</span>
@@ -147,11 +176,13 @@ export default function SessionView({ initialSession, onSessionUpdate }: Props) 
         <div className="sidebar-actions">
           <button
             className="btn"
-            onClick={startReview}
-            disabled={session.status !== "Completed"}
+            onClick={() =>
+              session.status === "Reviewing" ? setShowReviewTerminal(true) : startReview()
+            }
+            disabled={session.status !== "Completed" && session.status !== "Reviewing"}
             title="Ask the overview model whether the program still behaves the same"
           >
-            {session.status === "Reviewing" ? "Reviewing…" : "Run overview check"}
+            {session.status === "Reviewing" ? "Reviewing… (show log)" : "Run overview check"}
           </button>
           <button className="btn primary" onClick={applyChanges} disabled={!anyAccepted || isBusy}>
             Apply accepted changes
@@ -159,10 +190,13 @@ export default function SessionView({ initialSession, onSessionUpdate }: Props) 
         </div>
 
         {session.review && (
-          <div className={`review-box verdict-${session.review.verdict.toLowerCase()}`}>
-            <div className="review-verdict">{session.review.verdict.replace(/_/g, " ")}</div>
-            <div className="review-summary">{session.review.summary}</div>
-          </div>
+          <button
+            className={`verdict-pill verdict-${session.review.verdict.toLowerCase()}`}
+            onClick={() => setShowReviewTerminal(true)}
+            title="Show the full review"
+          >
+            {session.review.verdict.replace(/_/g, " ")}
+          </button>
         )}
 
         {applied && (
@@ -175,14 +209,18 @@ export default function SessionView({ initialSession, onSessionUpdate }: Props) 
       </aside>
 
       <main className="diff-pane">
-        {!detail && (
-          <div className="placeholder">
-            {selectedFileId ? "Loading file…" : "Select a file to review its changes."}
-          </div>
+        {!detail && !selectedFileId && (
+          <div className="placeholder">Select a file to review its changes.</div>
         )}
-        {detail && (
+        {!detail && selectedFileId && selectedSummary?.status !== "Modernizing" && (
+          <div className="placeholder">Loading file…</div>
+        )}
+        {selectedSummary?.status === "Modernizing" && (
+          <div className="placeholder">The agent is working on this file…</div>
+        )}
+        {detail && selectedSummary?.status !== "Modernizing" && (
           <DiffViewer
-            key={detail.id}
+            key={`diff-${detail.id}`}
             sessionId={session.id}
             detail={detail}
             onDetailChange={setDetail}
@@ -190,6 +228,41 @@ export default function SessionView({ initialSession, onSessionUpdate }: Props) 
           />
         )}
       </main>
+
+      {showReviewTerminal && (
+        <div className="review-overlay" onClick={() => setShowReviewTerminal(false)}>
+          <div className="review-panel" onClick={(e) => e.stopPropagation()}>
+            <LogTerminal
+              title={`Overview model — ${session.reviewModelId}`}
+              active={session.status === "Reviewing"}
+              fetchChunk={fetchReviewLog}
+              onClose={() => setShowReviewTerminal(false)}
+            />
+            {session.review && (
+              <div className="review-result">
+                <div className={`review-verdict verdict-${session.review.verdict.toLowerCase()}`}>
+                  {session.review.verdict.replace(/_/g, " ")}
+                </div>
+                <p className="review-summary">{session.review.summary}</p>
+                <div className="review-result-actions">
+                  <button className="btn subtle" onClick={() => setShowReviewTerminal(false)}>
+                    Close
+                  </button>
+                  {session.review.verdict === "POTENTIALLY_DIFFERENT" && (
+                    <button
+                      className="btn primary"
+                      onClick={implementReview}
+                      title="Send the reviewer's concerns back to the agent model to fix"
+                    >
+                      Implement requested changes
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

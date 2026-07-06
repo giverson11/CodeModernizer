@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/api.ts","./src/main.tsx","./src/components/AdjustDialog.tsx","./src/components/DiffViewer.tsx","./src/components/DirectoryPicker.tsx","./src/components/SessionView.tsx","./src/components/SetupForm.tsx"],"version":"5.6.3"}
+{"root":["./src/App.tsx","./src/api.ts","./src/highlight.ts","./src/main.tsx","./src/components/AdjustDialog.tsx","./src/components/DiffViewer.tsx","./src/components/DirectoryPicker.tsx","./src/components/LogTerminal.tsx","./src/components/SessionView.tsx","./src/components/SetupForm.tsx"],"version":"5.6.3"}

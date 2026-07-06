@@ -19,13 +19,10 @@ public class Library {
     }
 
     public boolean checkout(String isbn, Member member) {
-        Book found = null;
-        for (Book candidate : catalog) {
-            if (candidate.getIsbn().equals(isbn)) {
-                found = candidate;
-                break;
-            }
-        }
+        var found = catalog.stream()
+                .filter(candidate -> candidate.getIsbn().equals(isbn))
+                .findFirst()
+                .orElse(null);
         if (found == null) {
             return false;
         }

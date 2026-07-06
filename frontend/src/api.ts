@@ -38,6 +38,12 @@ export interface BrowseResult {
   directories: DirectoryEntry[];
 }
 
+export interface LogChunk {
+  next: number;
+  chunk: string;
+  active: boolean;
+}
+
 export interface FileSummary {
   id: string;
   relativePath: string;
@@ -122,6 +128,12 @@ export const api = {
   getFile: (sessionId: string, fileId: string) =>
     request<FileDetail>(`/api/sessions/${sessionId}/files/${fileId}`),
 
+  getFileLog: (sessionId: string, fileId: string, from: number) =>
+    request<LogChunk>(`/api/sessions/${sessionId}/files/${fileId}/log?from=${from}`),
+
+  getReviewLog: (sessionId: string, from: number) =>
+    request<LogChunk>(`/api/sessions/${sessionId}/review-log?from=${from}`),
+
   setHunkDecision: (sessionId: string, fileId: string, hunkId: number, decision: HunkDecision) =>
     request<FileDetail>(`/api/sessions/${sessionId}/files/${fileId}/hunks/${hunkId}`, {
       method: "POST",
@@ -142,6 +154,9 @@ export const api = {
 
   startReview: (sessionId: string) =>
     request<void>(`/api/sessions/${sessionId}/review`, { method: "POST" }),
+
+  implementReview: (sessionId: string) =>
+    request<{ files: number }>(`/api/sessions/${sessionId}/review/implement`, { method: "POST" }),
 
   apply: (sessionId: string) =>
     request<{ written: string[] }>(`/api/sessions/${sessionId}/apply`, { method: "POST" }),

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { api, FileDetail, Hunk, HunkDecision } from "../api";
+import { highlightLine, languageFor } from "../highlight";
 import AdjustDialog from "./AdjustDialog";
 
 interface Props {
@@ -48,6 +49,7 @@ export default function DiffViewer({ sessionId, detail, onDetailChange, onSummar
   const [adjusting, setAdjusting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const rows = useMemo(() => buildRows(detail), [detail]);
+  const language = useMemo(() => languageFor(detail.relativePath), [detail.relativePath]);
 
   const withRefresh = async (action: () => Promise<FileDetail>) => {
     setError(null);
@@ -101,7 +103,7 @@ export default function DiffViewer({ sessionId, detail, onDetailChange, onSummar
       {isModernizing && <div className="banner">The agent is revising this file…</div>}
 
       <div className="diff-columns-header">
-        <div>Original</div>
+        <div>Legacy</div>
         <div>Modernized</div>
       </div>
 
@@ -110,14 +112,15 @@ export default function DiffViewer({ sessionId, detail, onDetailChange, onSummar
           row.kind === "context" ? (
             <div className="diff-row context" key={`c${index}`}>
               <span className="lineno">{row.leftNo}</span>
-              <pre className="code">{row.text}</pre>
+              <pre className="code" dangerouslySetInnerHTML={highlightLine(row.text, language)} />
               <span className="lineno">{row.rightNo}</span>
-              <pre className="code">{row.text}</pre>
+              <pre className="code" dangerouslySetInnerHTML={highlightLine(row.text, language)} />
             </div>
           ) : (
             <HunkBlock
               key={`h${row.hunk.id}`}
               hunk={row.hunk}
+              language={language}
               disabled={isModernizing}
               onDecision={setDecision}
             />
@@ -134,10 +137,12 @@ export default function DiffViewer({ sessionId, detail, onDetailChange, onSummar
 
 function HunkBlock({
   hunk,
+  language,
   disabled,
   onDecision,
 }: {
   hunk: Hunk;
+  language: string | null;
   disabled: boolean;
   onDecision: (hunkId: number, decision: HunkDecision) => void;
 }) {
@@ -179,13 +184,15 @@ function HunkBlock({
       {rows.map((row, i) => (
         <div className="diff-row" key={i}>
           <span className="lineno" />
-          <pre className={`code ${row.left !== undefined ? "removed" : "blank"}`}>
-            {row.left ?? ""}
-          </pre>
+          <pre
+            className={`code ${row.left !== undefined ? "removed" : "blank"}`}
+            dangerouslySetInnerHTML={highlightLine(row.left ?? "", language)}
+          />
           <span className="lineno" />
-          <pre className={`code ${row.right !== undefined ? "added" : "blank"}`}>
-            {row.right ?? ""}
-          </pre>
+          <pre
+            className={`code ${row.right !== undefined ? "added" : "blank"}`}
+            dangerouslySetInnerHTML={highlightLine(row.right ?? "", language)}
+          />
         </div>
       ))}
     </div>

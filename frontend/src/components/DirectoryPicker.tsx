@@ -87,7 +87,7 @@ export default function DirectoryPicker({ initialPath, onSelect, onCancel }: Pro
             result?.directories.map((dir) => (
               <li key={dir.path}>
                 <button className="picker-dir" onClick={() => load(dir.path)}>
-                  📁 {dir.name}
+                  ▸ {dir.name}
                 </button>
               </li>
             ))}

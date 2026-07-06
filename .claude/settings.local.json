@@ -29,7 +29,12 @@
       "Bash(python3 -c \"import json,sys; print\\('hasApiKey:', json.load\\(sys.stdin\\)['hasApiKey']\\)\")",
       "Bash(curl -s -X POST http://localhost:5311/api/sessions -H 'Content-Type: application/json' -d '{\"projectPath\":\"/home/garrett/Documents/CodeModernizer/test-projects/legacy-java\",\"skillId\":\"java-21\",\"providerId\":\"claude\",\"agentModelId\":\"claude-haiku-4-5\",\"reviewModelId\":\"claude-haiku-4-5\"}')",
       "Bash(sed -i 's|<Nullable>enable</Nullable>|<Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>|' thinktest.csproj)",
-      "Bash(dotnet run *)"
+      "Bash(dotnet run *)",
+      "Bash(node repro.mjs)",
+      "Bash(mkdir -p /tmp/claude-1000/-home-garrett-Documents-CodeModernizer/226f8170-f853-42dd-bed7-b40b3a366ca9/scratchpad/uitest)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
     ]
   }
 }

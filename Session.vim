@@ -10,11 +10,22 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
 endif
 let s:shortmess_save = &shortmess
 set shortmess+=aoO
-badd +310 ~/Documents/CodeModernizer/src/CodeModernizer.Infrastructure/Services/ModernizationService.cs
+badd +15 ~/Documents/CodeModernizer/src/CodeModernizer.Api/Contracts.cs
 badd +2 ~/Documents/CodeModernizer/output:extension-output-asvetliakov.vscode-neovim-\%231-vscode-neovim\%20messages
+badd +199 ~/Documents/CodeModernizer/src/CodeModernizer.Api/Program.cs
+badd +1 ~/Documents/CodeModernizer/src/CodeModernizer.Core/Models/AiModels.cs
+badd +1 ~/Documents/CodeModernizer/src/CodeModernizer.Core/Abstractions/IAiProvider.cs
+badd +1 ~/Documents/CodeModernizer/src/CodeModernizer.Core/Abstractions/IDiffService.cs
+badd +1 ~/Documents/CodeModernizer/src/CodeModernizer.Core/Abstractions/ISessionStore.cs
+badd +1 ~/Documents/CodeModernizer/src/CodeModernizer.Core/Abstractions/ISkillRegistry.cs
+badd +44 ~/Documents/CodeModernizer/src/CodeModernizer.Infrastructure/Diff/DiffService.cs
+badd +1 ~/Documents/CodeModernizer/src/CodeModernizer.Infrastructure/Providers/AiProviderRegistry.cs
+badd +101 ~/Documents/CodeModernizer/src/CodeModernizer.Infrastructure/Providers/ClaudeProvider.cs
+badd +92 ~/.dotnet/symbolcache/341e43244547bbada279c50a90387a85d602012df9025019de57c5292fd913b5/RawContentBlockDelta.cs
+badd +26 ~/Documents/CodeModernizer/skills/java-21/prompt.md
 badd +1 ~/Documents/CodeModernizer/src/CodeModernizer.Api/appsettings.json
-badd +3 ~/Documents/CodeModernizer/src/CodeModernizer.Api/appsettings.Local.json
-badd +1 ~/Documents/Text\ File.txt
+badd +310 ~/Documents/CodeModernizer/src/CodeModernizer.Infrastructure/Services/ModernizationService.cs
+badd +10 ~/Documents/CodeModernizer/src/CodeModernizer.Infrastructure/Services/CodeResponseParser.cs
 argglobal
 %argdel
 wincmd t
@@ -39,7 +50,6 @@ if filereadable(s:sx)
 endif
 let &g:so = s:so_save | let &g:siso = s:siso_save
 set hlsearch
-nohlsearch
 let g:this_session = v:this_session
 let g:this_obsession = v:this_session
 doautoall SessionLoadPost
