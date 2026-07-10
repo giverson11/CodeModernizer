@@ -10,6 +10,34 @@ interface Props {
 
 const ACTIVE_FILE_STATUSES = new Set(["Pending", "Modernizing"]);
 
+// Plain-language wording for the overview model's raw verdict codes.
+const VERDICT_INFO: Record<string, { label: string; explanation: string }> = {
+  EQUIVALENT: {
+    label: "✓ Behaves the same",
+    explanation:
+      "The reviewer compared the modernized code against the original and found no behavior changes — it should produce the same output.",
+  },
+  POTENTIALLY_DIFFERENT: {
+    label: "⚠ Behavior may have changed",
+    explanation:
+      "The reviewer found changes that could make the modernized code behave differently from the original. Read its concerns below before applying.",
+  },
+  INSUFFICIENT_INFO: {
+    label: "? Couldn't verify",
+    explanation:
+      "The reviewer didn't have enough context to tell whether the behavior changed. Verify the changes manually before applying.",
+  },
+};
+
+function verdictInfo(verdict: string) {
+  return (
+    VERDICT_INFO[verdict] ?? {
+      label: verdict.replace(/_/g, " "),
+      explanation: "",
+    }
+  );
+}
+
 function statusIcon(file: FileSummary): string {
   switch (file.status) {
     case "Pending": return "○";
@@ -193,9 +221,9 @@ export default function SessionView({ initialSession, onSessionUpdate }: Props) 
           <button
             className={`verdict-pill verdict-${session.review.verdict.toLowerCase()}`}
             onClick={() => setShowReviewTerminal(true)}
-            title="Show the full review"
+            title={`${verdictInfo(session.review.verdict).explanation} Click to see the full review.`}
           >
-            {session.review.verdict.replace(/_/g, " ")}
+            {verdictInfo(session.review.verdict).label}
           </button>
         )}
 
@@ -241,8 +269,11 @@ export default function SessionView({ initialSession, onSessionUpdate }: Props) 
             {session.review && (
               <div className="review-result">
                 <div className={`review-verdict verdict-${session.review.verdict.toLowerCase()}`}>
-                  {session.review.verdict.replace(/_/g, " ")}
+                  {verdictInfo(session.review.verdict).label}
                 </div>
+                <p className="review-explanation">
+                  {verdictInfo(session.review.verdict).explanation}
+                </p>
                 <p className="review-summary">{session.review.summary}</p>
                 <div className="review-result-actions">
                   <button className="btn subtle" onClick={() => setShowReviewTerminal(false)}>

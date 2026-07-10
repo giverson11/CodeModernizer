@@ -269,6 +269,7 @@ input.picker-path:focus {
 .review-verdict.verdict-equivalent { color: var(--leaf); }
 .review-verdict.verdict-potentially_different { color: var(--ember); }
 .review-verdict.verdict-insufficient_info { color: var(--husk); }
+.review-explanation { font-size: 12px; color: var(--crema); }
 .review-summary { font-size: 12px; color: var(--husk); white-space: pre-wrap; }
 
 /* ---------- diff viewer ---------- */
