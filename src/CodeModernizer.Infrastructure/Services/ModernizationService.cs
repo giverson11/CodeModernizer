@@ -89,22 +89,12 @@ public sealed class ModernizationService(
         try
         {
             var provider = providers.Get(session.ProviderId);
-            using var throttle = new SemaphoreSlim(MaxParallelFiles);
 
-            var tasks = session.Files.Select(async file =>
-            {
-                await throttle.WaitAsync();
-                try
-                {
-                    await ModernizeFileAsync(provider, session.AgentModelId, skill, file);
-                }
-                finally
-                {
-                    throttle.Release();
-                }
-            });
+            await Parallel.ForEachAsync(
+                session.Files,
+                new ParallelOptions { MaxDegreeOfParallelism = MaxParallelFiles },
+                async (file, _) => await ModernizeFileAsync(provider, session.AgentModelId, skill, file));
 
-            await Task.WhenAll(tasks);
             session.Status = SessionStatus.Completed;
         }
         catch (Exception ex)
@@ -283,20 +273,10 @@ public sealed class ModernizationService(
         {
             try
             {
-                using var throttle = new SemaphoreSlim(MaxParallelFiles);
-                var tasks = targets.Select(async file =>
-                {
-                    await throttle.WaitAsync();
-                    try
-                    {
-                        await AdjustFileAsync(session, file, instructions);
-                    }
-                    finally
-                    {
-                        throttle.Release();
-                    }
-                });
-                await Task.WhenAll(tasks);
+                await Parallel.ForEachAsync(
+                    targets,
+                    new ParallelOptions { MaxDegreeOfParallelism = MaxParallelFiles },
+                    async (file, _) => await AdjustFileAsync(session, file, instructions));
             }
             catch (Exception ex)
             {
